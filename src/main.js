@@ -6,10 +6,13 @@ var askColor = "#8b0000";
 
 // configurations
 var chart = circularHeatChart()
-	.innerRadius(50)
+	.margin({ top: 30, right: 0, bottom: 0, left: 30 })
+	.innerRadius(70)
+	.segmentHeight(20)
 	.border(2)
-	.domain([546, 10000000])
+	.domain([546, 12000000])
 	.range([1, 10])
+	.N(18)
 	.accessor(totalAccessor);
 
 var svg = d3.select('.chart').insert('svg');
@@ -63,14 +66,14 @@ function drawChart(data) {
 		// text
 		bidMinMax = [d3.min(bid, priceAccessor), d3.max(bid, priceAccessor)];
 		askMinMax = [d3.min(ask, priceAccessor), d3.max(ask, priceAccessor)];
-		bidMax = bidMinMax[1];
-		askMin = askMinMax[0];
+		bidMin = bidMinMax[0];
+		askMax = askMinMax[1];
 
-		var priceText = svg.selectAll('text.bid').data([askMin, bidMax]);
+		var priceText = svg.selectAll('text.bid').data([bidMin, askMax]);
 		priceText.enter().append('text').merge(priceText)
 			.attr('class', 'bid').text(function(d) { return d; })
-			.attr('transform', function(d, i) { return 'translate(' + chart.offset() + "," + (chart.offset() + i * 27) + ")"; })
-			.attr('fill', (d, i) => (i == 0) ? askColor : bidColor)
+			.attr('transform', function(d, i) { return 'translate(' + (chart.margin().left + chart.offset()) + "," + (chart.margin().top + chart.offset() + i * 27) + ")"; })
+			.attr('fill', (d, i) => (i == 0) ? bidColor : askColor)
 			.attr('text-anchor', 'middle')
 			.attr('font-weight', 900)
 			.attr('font-size', 35);

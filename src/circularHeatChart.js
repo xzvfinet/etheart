@@ -10,6 +10,7 @@ function circularHeatChart() {
 		maxValue = 100,
 		maxTime = 2000,
 		offset = null,
+		N = 25,
 		accessor = function(d) { return d; },
 		dataScale = function(d) { return d; };
 
@@ -21,16 +22,26 @@ function circularHeatChart() {
 			data = data.map(x => Math.round(dataScale(accessor(x))));
 
 			if (offset == null) {
-				offset = innerRadius + range[1] * 2 * segmentHeight;
+				offset = innerRadius + N * segmentHeight;
 			}
 
+			var numberArray = Array.apply(null, { length: N }).map(Number.call, Number);
+			var g = svg.selectAll('g.background').data([0]);
+			g.enter().append("g")
+				.attr('class', 'background')
+				.attr('transform', "translate(" + parseInt(margin.left + offset) + "," + parseInt(margin.top + offset) + ")")
+				.selectAll('path').data(numberArray).enter().append("path")
+				.attr("d", d3.arc().innerRadius(ir).outerRadius(or).startAngle(0).endAngle(2 * Math.PI))
+				.attr("fill", "black")
+				.attr("fill-opacity", "0.05");
+
+
 			// group
-			var g = svg.selectAll('g') //.filter(x => console.log(x));
+			var g = svg.selectAll('g.foreground') //.filter(x => console.log(x));
 			g.data([data])
 				.enter()
 				.append("g")
-				.classed("circular-heat", true)
-			// .attr("transform", "translate(" + parseInt(margin.left + offset) + "," + parseInt(margin.top + offset) + ")")
+				.attr('class', 'foreground')
 
 			// color
 			var color = d3.scaleLinear().domain(range).range(colorRange);
@@ -44,7 +55,6 @@ function circularHeatChart() {
 				.attr("fill-opacity", 0.5)
 				.transition().ease(d3.easeLinear).duration(dur).remove()
 				.attrTween("transform", rotTween(offset));
-
 		});
 	}
 
@@ -129,6 +139,13 @@ function circularHeatChart() {
 		offset = _;
 		return chart;
 	}
+
+	chart.N = function(_) {
+		if (!arguments.length) return N;
+		N = _;
+		return chart;
+	}
+
 
 	return chart;
 }
