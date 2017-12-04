@@ -11,8 +11,7 @@ var chart = circularHeatChart()
 	.segmentHeight(20)
 	.border(2)
 	.domain([546, 12000000])
-	.range([1, 10])
-	.N(18)
+	.range([1, 18])
 	.accessor(totalAccessor);
 
 var svg = d3.select('.chart').insert('svg');
@@ -25,6 +24,7 @@ function prefetch() {
 }
 prefetch();
 
+var rpm = 1;
 var t = new Transaction();
 
 function drawChart(data) {
@@ -34,10 +34,15 @@ function drawChart(data) {
 		// filtering by string comparison
 		let prev = t.findInArray(data.data);
 		if (prev != -1) {
-			filtered = filtered.slice(0, prev);
+			// filtered = filtered.slice(0, prev);
+			var scale = d3.scaleLinear().domain([0, 10]).range([2000, 1]);
+			rpm = Math.max(scale(prev), 1);
+			console.log(prev, rpm);
 		}
 
-		console.log(filtered.length, t.transaction_date, t.total);
+		t = new Transaction(data.data[0]);
+		// console.log(filtered.length, t.transaction_date, t.total);
+
 		if (filtered.length == 0) {
 			// no transactions to update
 			setTimeout(prefetch, 300);
@@ -81,6 +86,34 @@ function drawChart(data) {
 
 	setTimeout(prefetch, 300);
 }
+
+setTimeout(function beat() {
+	d3.selectAll("g.content, path.back")
+		.transition().duration(function(d) { return d * 40 })
+		// .style("fill", "black")
+		// .style("fill-opacity", 1)
+		.attrTween("transform", function(d) {
+			var i = d3.interpolate(1.0, 1.1);
+			return function(t) {
+				return "scale(" + i(t) + ")";
+			};
+		})
+		.on('end', function(d) {
+			d3.select(this).transition(d * 40)
+				.attrTween("transform", function() {
+					var i = d3.interpolate(1.1, 1.0);
+					return function(t) {
+						return "scale(" + i(t) + ")";
+					};
+				}).on('end', function(d) {
+					if (d == chart.range()[1] - 1) {
+						setTimeout(beat, rpm);
+					}
+				})
+			// .style("fill", "white")
+			// .style("fill-opacity", 0.5)
+		});
+}, 1000);
 
 function totalAccessor(data) {
 	return data.total;

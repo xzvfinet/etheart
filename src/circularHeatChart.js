@@ -10,7 +10,6 @@ function circularHeatChart() {
 		maxValue = 100,
 		maxTime = 2000,
 		offset = null,
-		N = 25,
 		accessor = function(d) { return d; },
 		dataScale = function(d) { return d; };
 
@@ -19,42 +18,53 @@ function circularHeatChart() {
 			var svg = d3.select(this);
 
 			dataScale = d3.scaleLinear().domain(domain).range(range);
-			data = data.map(x => Math.round(dataScale(accessor(x))));
+			data = data.map(x => Math.min(range[1], Math.round(dataScale(accessor(x)))));
 
 			if (offset == null) {
-				offset = innerRadius + N * segmentHeight;
+				offset = innerRadius + range[1] * segmentHeight;
 			}
 
-			var numberArray = Array.apply(null, { length: N }).map(Number.call, Number);
-			var g = svg.selectAll('g.background').data([0]);
-			g.enter().append("g")
-				.attr('class', 'background')
-				.attr('transform', "translate(" + parseInt(margin.left + offset) + "," + parseInt(margin.top + offset) + ")")
-				.selectAll('path').data(numberArray).enter().append("path")
-				.attr("d", d3.arc().innerRadius(ir).outerRadius(or).startAngle(0).endAngle(2 * Math.PI))
-				.attr("fill", "black")
-				.attr("fill-opacity", "0.05");
-
-
-			// group
-			var g = svg.selectAll('g.foreground') //.filter(x => console.log(x));
-			g.data([data])
-				.enter()
-				.append("g")
-				.attr('class', 'foreground')
+			var translate = "translate(" + parseInt(margin.left + offset) + "," + parseInt(margin.top + offset) + ")";
 
 			// color
 			var color = d3.scaleLinear().domain(range).range(colorRange);
 			randomPos = d3.range(data.length).map(x => 2 * Math.PI * Math.random());
 
-			// arc
-			var path = g.selectAll("path").data(data)
-				.enter().append("path")
-				.attr("d", d3.arc().innerRadius(ir).outerRadius(or).startAngle(sa).endAngle(ea))
-				.attr("fill", function(d) { return color(d); })
-				.attr("fill-opacity", 0.5)
-				.transition().ease(d3.easeLinear).duration(dur).remove()
-				.attrTween("transform", rotTween(offset));
+			// background
+			var numberArray = Array.apply(null, { length: range[1] }).map(Number.call, Number);
+			svg.selectAll('g.background').data([0])
+				.enter().append("g")
+				.attr('class', 'background')
+				.attr('transform', translate)
+				.selectAll('path').data(numberArray).enter().append("path")
+				.attr("class", "back")
+				.attr("d", d3.arc().innerRadius(ir).outerRadius(or).startAngle(0).endAngle(2 * Math.PI))
+				.attr("fill", "black")
+				.attr("fill-opacity", "0.05");
+
+			// foreground
+			var gForeground = svg.selectAll('g.foreground').data([data]);
+			gForeground.enter().append("g")
+				.merge(gForeground)
+				.attr('class', 'foreground')
+				.attr('transform', translate);
+
+			var gContents = gForeground.selectAll("g.content").data(numberArray);
+			gContents.enter().append("g")
+				.merge(gContents)
+				.attr('class', 'content');
+
+			gForeground.selectAll("g.content").each(function(d, i) {
+				d3.select(this)
+					.selectAll('path').data(data.filter(x => x == d))
+					.enter().append('path')
+					.attr("class", "fore")
+					.attr("d", d3.arc().innerRadius(ir).outerRadius(or).startAngle(sa).endAngle(ea))
+					.attr("fill", function(d) { return color(d); })
+					.attr("fill-opacity", 0.5)
+					.transition().ease(d3.easeLinear).duration(dur).remove()
+					.attrTween("transform", rotTween(offset));
+			});
 		});
 	}
 
@@ -76,11 +86,19 @@ function circularHeatChart() {
 	}
 
 	rotTween = function(offset) {
-		var i = d3.interpolate(0, 720);
 		return function(d) {
+			var i = d3.interpolate(0, 720);
 			return function(t) {
-				return "translate(" + parseInt(margin.left + offset) + "," + parseInt(margin.top + offset) + ")" +
-					"rotate(" + i(t) + ")";
+				return "rotate(" + i(t) + ")";
+			};
+		};
+	}
+
+	scaleTween = function(offset) {
+		return function(d) {
+			var i = d3.interpolate(1.0, 1.1);
+			return function(t) {
+				return "scale(" + i(t) + ")";
 			};
 		};
 	}
@@ -137,12 +155,6 @@ function circularHeatChart() {
 	chart.offset = function(_) {
 		if (!arguments.length) return offset;
 		offset = _;
-		return chart;
-	}
-
-	chart.N = function(_) {
-		if (!arguments.length) return N;
-		N = _;
 		return chart;
 	}
 
